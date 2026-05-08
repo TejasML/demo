@@ -62,13 +62,11 @@ pneumonia-detection/
 ├── app/
 │   └── app.py                                # LungLens AI — Streamlit deployment application
 │
-├── models/
-│   ├── pneumonia_detection_model.keras       # Trained Custom CNN weights
-│   └── transfer_learning_model.keras         # Trained DenseNet121 weights
-│
 ├── requirements.txt
 └── README.md
 ```
+
+> Model weight files (`.keras`) are not included in this repository due to size. They are hosted on and served from Hugging Face Hub — see [Deployment](#deployment).
 
 ---
 
@@ -84,7 +82,7 @@ pneumonia-detection/
 
 **Class Imbalance**
 
-The training set contains approximately **3x more Pneumonia samples than Normal** (3,875 vs 1,341). This imbalance is intentional in the original dataset as it reflects real-world clinical distributions, but it must be explicitly addressed during training. Each model in this project handles the imbalance using a different strategy — details are provided in the respective model sections.
+The training set contains approximately **3x more Pneumonia samples than Normal** (3,875 vs 1,341). This imbalance reflects real-world clinical distributions but must be explicitly addressed during training. Each model in this project handles the imbalance using a different strategy — details are provided in the respective model sections.
 
 ---
 
@@ -143,7 +141,7 @@ Input: (224 × 224 × 1)
 **Callbacks**
 
 - `EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)` — halts training when validation loss stops improving and restores the best checkpoint.
-- `ReduceLROnPlateau(monitor='val_loss', factor=0.3, patience=3, min_lr=1e-6)` — reduces learning rate when the model plateaus, allowing finer gradient updates near the optimum.
+- `ReduceLROnPlateau(monitor='val_loss', factor=0.3, patience=3, min_lr=1e-6)` — reduces the learning rate when the model plateaus, allowing finer gradient updates near the optimum.
 
 ### Test Set Results (624 images)
 
@@ -190,7 +188,6 @@ Input: (224 × 224 × 3)
 | Total parameters | 7,304,257 |
 | Trainable (Phase 1 — head only) | 264,705 |
 | Non-trainable (frozen backbone) | 7,039,552 |
-| Trainable (Phase 2 — last 50 layers unfrozen) | ~2.1M |
 
 ### Class Imbalance Handling
 
@@ -198,7 +195,7 @@ Unlike the Custom CNN which uses augmentation, the DenseNet model addresses imba
 
 ```python
 class_weight = {
-    0: 1.9448   # NORMAL   — minority class, penalized more heavily
+    0: 1.9448   # NORMAL    — minority class, penalized more heavily
     1: 0.6730   # PNEUMONIA — majority class, penalized less
 }
 ```
@@ -267,12 +264,11 @@ The optimal threshold of **0.57** was selected and applied in the deployed appli
 | Decision threshold | 0.50 (default) | 0.57 (optimized) |
 | Overall accuracy | **90.06%** | 89.00% |
 | Pneumonia Recall | 89.49% | **91.28%** |
-| Pneumonia Precision | **94.00%** | 92.00% |
+| Pneumonia Precision | **0.94** | 0.92 |
 | Pneumonia F1 | **0.92** | 0.91 |
-| Normal F1 | 0.87 | **0.86** |
-| Macro F1 | 0.895 | **0.8877** |
+| Normal F1 | **0.87** | 0.86 |
 
-**Summary**: The Custom CNN achieves marginally higher overall accuracy and Pneumonia Precision. The DenseNet121 model edges ahead on Pneumonia Recall, which is the more critical metric in a clinical screening context — it misses fewer true Pneumonia cases. The choice between models depends on whether the deployment priority is minimizing false positives or false negatives.
+**Summary**: The Custom CNN achieves higher overall accuracy, Pneumonia Precision, and Normal F1. The DenseNet121 model edges ahead on Pneumonia Recall — meaning it misses fewer true Pneumonia cases, which is the most critical metric in a clinical screening context. The choice between models depends on whether the deployment priority is minimizing false positives or false negatives.
 
 ---
 
@@ -294,9 +290,6 @@ Users can switch between the Custom CNN and DenseNet121 at runtime. The app auto
 **Clinical Precaution Panel**
 When Pneumonia is detected, the app renders a structured panel of 6 medical precautions: seek immediate medical attention, complete bed rest, hydration, infection control and isolation, respiratory monitoring, and avoidance of lung irritants.
 
-**Model Hosting**
-Both `.keras` weight files are hosted on Hugging Face Hub (`Tejas-ML/pneumonia-detection-models`) and downloaded at runtime via `hf_hub_download`. This keeps the repository lightweight and the app stateless.
-
 **Medical Disclaimer**
 Every prediction is accompanied by a prominent disclaimer stating that LungLens AI is a research and educational tool only and must not be used as a substitute for professional radiological diagnosis.
 
@@ -308,6 +301,11 @@ cd pneumonia-detection
 pip install -r requirements.txt
 streamlit run app/app.py
 ```
+
+> **Note**: The app downloads model weights from Hugging Face Hub at runtime via `hf_hub_download`. An active internet connection is required. If the models are in a private repository, you will also need to set your Hugging Face token:
+> ```bash
+> huggingface-cli login
+> ```
 
 ---
 
